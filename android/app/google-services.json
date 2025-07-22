@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "361921636266",
+    "project_id": "mosellapp2",
+    "storage_bucket": "mosellapp2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:361921636266:android:8fcbc50c4f147a458aadd3",
+        "android_client_info": {
+          "package_name": "com.example.mosell"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAirPeOJS-2GPlKfSoEJU8AZ1CUr_Z2K1c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
