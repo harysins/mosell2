@@ -7,9 +7,11 @@ class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   UserModel? _user;
   bool _isLoading = false;
+  String? _verificationId; // For phone authentication
 
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
+  String? get verificationId => _verificationId;
 
   // Listen to auth state changes
   void initializeAuthListener() {
@@ -23,64 +25,102 @@ class AuthProvider with ChangeNotifier {
     });
   }
 
-  // Register
-  Future<bool> register(String email, String password, String name, UserType userType, String? photoUrl, String? location) async {
+  // Sign in with Google
+  Future<bool> signInWithGoogle(UserType userType, String? location, String? address, String? phoneNumber) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      UserModel? newUser = await _authService.registerWithEmailAndPassword(
-          email, password, name, userType, photoUrl, location);
-      if (newUser != null) {
-        _user = newUser;
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      }
+      UserModel? newUser = await _authService.signInWithGoogle(userType, location, address, phoneNumber);
+      _user = newUser;
+      _isLoading = false;
+      notifyListeners();
+      return newUser != null;
     } catch (e) {
+      _isLoading = false;
+      notifyListeners();
       print(e.toString());
+      return false;
     }
-
-    _isLoading = false;
-    notifyListeners();
-    return false;
   }
 
-  // Sign in
-  Future<bool> signIn(String email, String password) async {
+  // Phone authentication - Step 1: Send verification code
+  Future<bool> sendPhoneVerificationCode(String phoneNumber) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      UserModel? user = await _authService.signInWithEmailAndPassword(email, password);
-      if (user != null) {
-        _user = user;
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      }
+      await _authService.verifyPhoneNumber(
+        phoneNumber,
+        (PhoneAuthCredential credential) async {
+          // Auto-verification completed
+          // This happens on some Android devices when SMS is automatically read
+          _isLoading = false;
+          notifyListeners();
+        },
+        (FirebaseAuthException e) {
+          // Verification failed
+          _isLoading = false;
+          notifyListeners();
+          print('Phone verification failed: ${e.message}');
+        },
+        (String verificationId, int? resendToken) {
+          // Code sent successfully
+          _verificationId = verificationId;
+          _isLoading = false;
+          notifyListeners();
+        },
+        (String verificationId) {
+          // Auto-retrieval timeout
+          _verificationId = verificationId;
+          _isLoading = false;
+          notifyListeners();
+        },
+      );
+      return true;
     } catch (e) {
+      _isLoading = false;
+      notifyListeners();
       print(e.toString());
+      return false;
     }
+  }
 
-    _isLoading = false;
+  // Phone authentication - Step 2: Verify code and sign in
+  Future<bool> verifyPhoneCodeAndSignIn(String smsCode, String name, UserType userType, String? photoUrl, String? location, String? address) async {
+    if (_verificationId == null) return false;
+
+    _isLoading = true;
     notifyListeners();
-    return false;
+
+    try {
+      PhoneAuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: _verificationId!,
+        smsCode: smsCode,
+      );
+
+      UserModel? newUser = await _authService.signInWithPhoneCredential(credential, name, userType, photoUrl, location, address);
+      _user = newUser;
+      _isLoading = false;
+      notifyListeners();
+      return newUser != null;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      print(e.toString());
+      return false;
+    }
   }
 
   // Sign out
   Future<void> signOut() async {
-    await _authService.signOut();
-    _user = null;
-    notifyListeners();
-  }
-
-  // Update user data
-  Future<void> updateUser(Map<String, dynamic> data) async {
-    if (_user != null) {
-      await _authService.updateUserData(_user!.uid, data);
-      _user = await _authService.getUserData(_user!.uid);
+    try {
+      await _authService.signOut();
+      _user = null;
+      _verificationId = null;
       notifyListeners();
+    } catch (e) {
+      print(e.toString());
     }
   }
 }

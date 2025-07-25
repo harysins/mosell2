@@ -12,6 +12,8 @@ class UserModel {
   final String? photoUrl;
   final UserType userType;
   final String? location;
+  final String? address; // <--- حقل جديد للعنوان
+  final String? phoneNumber; // <--- حقل جديد لرقم الهاتف
   final double? rating;
   final int? ratingCount;
 
@@ -22,6 +24,8 @@ class UserModel {
     this.photoUrl,
     required this.userType,
     this.location,
+    this.address, // <--- إضافة الحقل الجديد
+    this.phoneNumber, // <--- إضافة الحقل الجديد
     this.rating,
     this.ratingCount,
   });
@@ -36,6 +40,8 @@ class UserModel {
       photoUrl: data['photoUrl'],
       userType: (data['userType'] == 'broker') ? UserType.broker : UserType.buyer,
       location: data['location'],
+      address: data['address'], // <--- إضافة الحقل الجديد
+      phoneNumber: data['phoneNumber'], // <--- إضافة الحقل الجديد
       rating: (data['rating'] as num?)?.toDouble() ?? 0.0,
       ratingCount: data['ratingCount'] ?? 0,
     );
@@ -47,33 +53,12 @@ class UserModel {
       'email': email,
       'name': name,
       'photoUrl': photoUrl,
-      'userType': userType == UserType.broker ? 'broker' : 'buyer',
+      'userType': userType.toString().split('.').last,
       'location': location,
+      'address': address, // <--- إضافة الحقل الجديد
+      'phoneNumber': phoneNumber, // <--- إضافة الحقل الجديد
       'rating': rating,
       'ratingCount': ratingCount,
     };
-  }
-
-  // Method to create a copy with updated fields
-  UserModel copyWith({
-    String? uid,
-    String? email,
-    String? name,
-    String? photoUrl,
-    UserType? userType,
-    String? location,
-    double? rating,
-    int? ratingCount,
-  }) {
-    return UserModel(
-      uid: uid ?? this.uid,
-      email: email ?? this.email,
-      name: name ?? this.name,
-      photoUrl: photoUrl ?? this.photoUrl,
-      userType: userType ?? this.userType,
-      location: location ?? this.location,
-      rating: rating ?? this.rating,
-      ratingCount: ratingCount ?? this.ratingCount,
-    );
   }
 }

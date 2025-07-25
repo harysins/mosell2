@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // <--- إضافة هذا للنسخ إلى الحافظة
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
@@ -9,6 +10,7 @@ import '../models/user_model.dart';
 import '../constants/app_colors.dart';
 import '../services/auth_service.dart';
 import 'property_details_screen.dart';
+import 'add_property_screen.dart'; // <--- إضافة هذا
 
 class BrokerProfileScreen extends StatefulWidget {
   final String brokerId;
@@ -44,6 +46,17 @@ class _BrokerProfileScreenState extends State<BrokerProfileScreen> {
     }
   }
 
+  void _copyToClipboard(String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('تم نسخ $label'),
+        backgroundColor: AppColors.success,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   void _showRatingDialog() {
     double rating = 0;
     showDialog(
@@ -60,7 +73,7 @@ class _BrokerProfileScreenState extends State<BrokerProfileScreen> {
                 initialRating: 0,
                 minRating: 1,
                 direction: Axis.horizontal,
-                allowHalfRating: true,
+                allowHalfRating: false,
                 itemCount: 5,
                 itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
                 itemBuilder: (context, _) => const Icon(
@@ -83,25 +96,22 @@ class _BrokerProfileScreenState extends State<BrokerProfileScreen> {
                 if (rating > 0) {
                   final propertiesProvider = Provider.of<PropertiesProvider>(context, listen: false);
                   bool success = await propertiesProvider.addBrokerRating(widget.brokerId, rating);
-                  
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                    if (success) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('تم إضافة التقييم بنجاح'),
-                          backgroundColor: AppColors.success,
-                        ),
-                      );
-                      _loadBrokerData(); // Reload broker data to show updated rating
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('فشل في إضافة التقييم'),
-                          backgroundColor: AppColors.error,
-                        ),
-                      );
-                    }
+                  Navigator.of(context).pop();
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تم إضافة التقييم بنجاح'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                    _loadBrokerData(); // Reload broker data to show updated rating
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('فشل في إضافة التقييم'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
                   }
                 }
               },
@@ -127,49 +137,74 @@ class _BrokerProfileScreenState extends State<BrokerProfileScreen> {
 
     if (_broker == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('الملف الشخصي')),
+        appBar: AppBar(
+          title: const Text('ملف السمسار'),
+          backgroundColor: AppColors.primaryBlue,
+          foregroundColor: AppColors.white,
+        ),
         body: const Center(
-          child: Text('لم يتم العثور على السمسار'),
+          child: Text(
+            'لم يتم العثور على السمسار',
+            style: TextStyle(fontSize: 18, color: AppColors.grey),
+          ),
         ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isOwnProfile ? 'ملفي الشخصي' : 'ملف السمسار'),
+        title: Text(_broker!.name),
+        backgroundColor: AppColors.primaryBlue,
+        foregroundColor: AppColors.white,
+        actions: [
+          if (isOwnProfile)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () {
+                // يمكن إضافة شاشة تعديل الملف الشخصي لاحقاً
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('ميزة تعديل الملف الشخصي قريباً'),
+                    backgroundColor: AppColors.warning,
+                  ),
+                );
+              },
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Profile Header
+            // Broker Info Card
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.primaryBlue,
-                    AppColors.primaryBlue.withOpacity(0.8),
-                  ],
+              decoration: const BoxDecoration(
+                color: AppColors.primaryBlue,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
                 ),
               ),
               child: Column(
                 children: [
+                  // Profile Image
                   CircleAvatar(
-                    radius: 50,
+                    radius: 60,
                     backgroundImage: _broker!.photoUrl != null
                         ? CachedNetworkImageProvider(_broker!.photoUrl!)
                         : null,
                     child: _broker!.photoUrl == null
                         ? Text(
                             _broker!.name.isNotEmpty ? _broker!.name[0].toUpperCase() : 'U',
-                            style: const TextStyle(fontSize: 32, color: AppColors.white),
+                            style: const TextStyle(fontSize: 36, color: AppColors.primaryBlue),
                           )
                         : null,
                   ),
+                  
                   const SizedBox(height: 16),
+                  
+                  // Name
                   Text(
                     _broker!.name,
                     style: const TextStyle(
@@ -178,7 +213,10 @@ class _BrokerProfileScreenState extends State<BrokerProfileScreen> {
                       color: AppColors.white,
                     ),
                   ),
+                  
                   const SizedBox(height: 8),
+                  
+                  // Location
                   if (_broker!.location != null)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -187,11 +225,16 @@ class _BrokerProfileScreenState extends State<BrokerProfileScreen> {
                         const SizedBox(width: 4),
                         Text(
                           _broker!.location!,
-                          style: const TextStyle(color: AppColors.white),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: AppColors.white,
+                          ),
                         ),
                       ],
                     ),
+                  
                   const SizedBox(height: 16),
+                  
                   // Rating
                   if (_broker!.rating != null && _broker!.ratingCount != null)
                     Container(
@@ -207,114 +250,227 @@ class _BrokerProfileScreenState extends State<BrokerProfileScreen> {
                           const SizedBox(width: 4),
                           Text(
                             '${_broker!.rating!.toStringAsFixed(1)} (${_broker!.ratingCount} تقييم)',
-                            style: const TextStyle(color: AppColors.white),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: AppColors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
-                      ),
-                    ),
-                  
-                  if (!isOwnProfile && currentUser != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: ElevatedButton.icon(
-                        onPressed: _showRatingDialog,
-                        icon: const Icon(Icons.star_rate),
-                        label: const Text('تقييم السمسار'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.white,
-                          foregroundColor: AppColors.primaryBlue,
-                        ),
                       ),
                     ),
                 ],
               ),
             ),
             
-            // Properties Section
+            const SizedBox(height: 24),
+            
+            // Contact Information
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    isOwnProfile ? 'عقاراتي' : 'عقارات السمسار',
-                    style: const TextStyle(
+                  const Text(
+                    'معلومات الاتصال',
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  
                   const SizedBox(height: 16),
                   
-                  StreamBuilder<List<PropertyModel>>(
-                    stream: Provider.of<PropertiesProvider>(context, listen: false)
-                        .getBrokerProperties(widget.brokerId),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return Center(
-                          child: Column(
-                            children: [
-                              const Icon(
-                                Icons.business_outlined,
-                                size: 64,
-                                color: AppColors.grey,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                isOwnProfile 
-                                    ? 'لم تقم بإضافة أي عقارات بعد'
-                                    : 'لا توجد عقارات لهذا السمسار',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  color: AppColors.grey,
-                                ),
-                              ),
-                            ],
+                  // Address
+                  if (_broker!.address != null)
+                    _buildContactInfo(
+                      icon: Icons.home,
+                      label: 'العنوان',
+                      value: _broker!.address!,
+                      onTap: () => _copyToClipboard(_broker!.address!, 'العنوان'),
+                    ),
+                  
+                  // Phone Number
+                  if (_broker!.phoneNumber != null)
+                    _buildContactInfo(
+                      icon: Icons.phone,
+                      label: 'رقم الهاتف',
+                      value: _broker!.phoneNumber!,
+                      onTap: () => _copyToClipboard(_broker!.phoneNumber!, 'رقم الهاتف'),
+                    ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Action Buttons
+                  Row(
+                    children: [
+                      if (!isOwnProfile && currentUser != null)
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _showRatingDialog,
+                            icon: const Icon(Icons.star_rate),
+                            label: const Text('تقييم السمسار'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.warning,
+                              foregroundColor: AppColors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
                           ),
-                        );
-                      }
-
-                      final properties = snapshot.data!;
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.8,
                         ),
-                        itemCount: properties.length,
-                        itemBuilder: (context, index) {
-                          final property = properties[index];
-                          return PropertyGridCard(property: property);
-                        },
-                      );
-                    },
+                      
+                      if (isOwnProfile) ...[
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const AddPropertyScreen()),
+                              );
+                            },
+                            icon: const Icon(Icons.add_home),
+                            label: const Text('إضافة عقار'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              foregroundColor: AppColors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Properties Section
+                  const Text(
+                    'العقارات',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
+            
+            // Properties List
+            StreamBuilder<List<PropertyModel>>(
+              stream: Provider.of<PropertiesProvider>(context, listen: false)
+                  .getBrokerProperties(widget.brokerId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.business_outlined,
+                            size: 64,
+                            color: AppColors.grey,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'لا توجد عقارات',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: AppColors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final properties = snapshot.data!;
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: properties.length,
+                  itemBuilder: (context, index) {
+                    final property = properties[index];
+                    return _buildPropertyCard(property);
+                  },
+                );
+              },
+            ),
+            
+            const SizedBox(height: 32),
           ],
         ),
       ),
     );
   }
-}
 
-class PropertyGridCard extends StatelessWidget {
-  final PropertyModel property;
+  Widget _buildContactInfo({
+    required IconData icon,
+    required String label,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.lightGrey,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.grey.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: AppColors.primaryBlue, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.copy, color: AppColors.grey, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-  const PropertyGridCard({super.key, required this.property});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildPropertyCard(PropertyModel property) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -325,38 +481,42 @@ class PropertyGridCard extends StatelessWidget {
           );
         },
         borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
             // Property Image
-            Expanded(
-              flex: 3,
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                bottomLeft: Radius.circular(12),
+              ),
               child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  color: AppColors.lightGrey,
-                ),
+                width: 100,
+                height: 100,
                 child: property.imageUrls.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                        child: CachedNetworkImage(
-                          imageUrl: property.imageUrls.first,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => const Center(
+                    ? CachedNetworkImage(
+                        imageUrl: property.imageUrls[0],
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: AppColors.lightGrey,
+                          child: const Center(
                             child: CircularProgressIndicator(),
                           ),
-                          errorWidget: (context, url, error) => const Icon(
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: AppColors.lightGrey,
+                          child: const Icon(
                             Icons.image_not_supported,
-                            size: 30,
                             color: AppColors.grey,
                           ),
                         ),
                       )
-                    : const Icon(
-                        Icons.home_work,
-                        size: 30,
-                        color: AppColors.grey,
+                    : Container(
+                        color: AppColors.lightGrey,
+                        child: const Icon(
+                          Icons.home_work,
+                          color: AppColors.grey,
+                          size: 40,
+                        ),
                       ),
               ),
             ),
@@ -365,14 +525,14 @@ class PropertyGridCard extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       property.title,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                       maxLines: 1,
@@ -382,15 +542,15 @@ class PropertyGridCard extends StatelessWidget {
                     Text(
                       property.city,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         color: AppColors.grey,
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 8),
                     Text(
-                      '${property.price.toStringAsFixed(0)} د.ع',
+                      _formatPrice(property.price),
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primaryBlue,
                       ),
@@ -403,5 +563,25 @@ class PropertyGridCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatPrice(double price) {
+    if (price >= 1000000) {
+      double millions = price / 1000000;
+      if (millions == millions.toInt()) {
+        return '${millions.toInt()} مليون د.ع';
+      } else {
+        return '${millions.toStringAsFixed(1)} مليون د.ع';
+      }
+    } else if (price >= 1000) {
+      double thousands = price / 1000;
+      if (thousands == thousands.toInt()) {
+        return '${thousands.toInt()} ألف د.ع';
+      } else {
+        return '${thousands.toStringAsFixed(1)} ألف د.ع';
+      }
+    } else {
+      return '${price.toStringAsFixed(0)} د.ع';
+    }
   }
 }
