@@ -16,9 +16,9 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.7.0'  # نسخة تدعم Dart 3.8.1 أو أعلى
+          flutter-version: '3.22.1'  # أو 3.22.2 حسب اللي يضبط معك
 
-      - name: Flutter pub get
+      - name: Install dependencies
         run: flutter pub get
 
       - name: Build APK
