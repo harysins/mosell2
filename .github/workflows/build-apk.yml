@@ -13,25 +13,13 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v3
 
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: 17
-
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
+          flutter-version: '3.7.0'  # نسخة تدعم Dart 3.8.1 أو أعلى
 
-      - name: Install dependencies
+      - name: Flutter pub get
         run: flutter pub get
 
       - name: Build APK
         run: flutter build apk --release
-
-      - name: Upload build
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
